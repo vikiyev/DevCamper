@@ -16,6 +16,8 @@ The API gives the user the ability to search, create, update or delete bootcamp/
     - [Code Related Suggestions](#code-related-suggestions)
   - [Setting up Express Server](#setting-up-express-server)
   - [Middlewares](#middlewares)
+  - [MongoDB](#mongodb)
+  - [Models](#models)
 
 # Functionalities
 
@@ -234,4 +236,64 @@ module.exports = router;
 
 ## Middlewares
 
-Middlewares are functions that have access to the request and response. These can be used for authentication, error handling, etc.
+Middlewares are functions that have access to the request and response cycle that runs during that cycle. These can be used for authentication, error handling, etc.
+
+```javascript
+const logger = (req, res, next) => {
+  req.hello = "Hello from logger";
+  console.log(
+    `${req.method} ${req.protocol}://${req.get("host")}${req.originalUrl}`
+  );
+  next();
+};
+
+app.use(logger);
+app.use("/api/v1/bootcamps", bootcamps);
+```
+
+We will now be able to access the **hello** property on the request object on our bootcamps controller.
+
+```javascript
+exports.getBootcamps = (req, res, next) => {
+  res
+    .status(200)
+    .json({ success: true, msg: "Show all bootcamps", hello: req.hello });
+};
+```
+
+For this project, we use **morgan** as the logging middleware.
+
+```javascript
+const morgan = require("morgan");
+
+// Dev logging middleware
+if (process.env.NODE_ENV === "development") {
+  app.use(morgan("dev"));
+}
+```
+
+## MongoDB
+
+To connect to mongoDB atlas, we use the connection string provided. Using **mongoose** library, we don't have to write SQL.
+
+```javascript
+const mongoose = require("mongoose");
+
+const connectDB = async () => {
+  const conn = await mongoose.connect(process.env.MONGO_URI, {});
+  console.log(`Connected to MongoDB: ${conn.connection.host}`);
+};
+
+module.exports = connectDB;
+```
+
+```javascript
+const connectDB = require("./config/db");
+
+// connect to mongodb
+connectDB();
+```
+
+## Models
+
+We need to create a model for our collections.
