@@ -1,0 +1,29 @@
+{
+  "name": "devcamper",
+  "version": "1.0.0",
+  "description": "A REST API built from scratch using Nodejs, Express and MongoDB integration. This API features middlewares for routing and authentication. This project is from Brad Traversy's course [Node.js API Masterclass With Express & MongoDB](https://www.udemy.com/course/nodejs-api-masterclass/).",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "cross-env NODE_ENV=production node server",
+    "dev": "nodemon server"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vikiyev/DevCamper.git"
+  },
+  "author": "vikiyev",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/vikiyev/DevCamper/issues"
+  },
+  "homepage": "https://github.com/vikiyev/DevCamper#readme",
+  "devDependencies": {
+    "cross-env": "^7.0.3",
+    "nodemon": "^2.0.20"
+  },
+  "dependencies": {
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2"
+  }
+}
