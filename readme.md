@@ -18,6 +18,8 @@ The API gives the user the ability to search, create, update or delete bootcamp/
   - [Middlewares](#middlewares)
   - [MongoDB](#mongodb)
   - [Models](#models)
+    - [Create Bootcamp](#create-bootcamp)
+  - [Custom Error Handling Middleware](#custom-error-handling-middleware)
 
 # Functionalities
 
@@ -296,4 +298,88 @@ connectDB();
 
 ## Models
 
-We need to create a model for our collections.
+We need to create a model for our collections wherein we create a mongoose schema. For the location property, we use mongoose GeoJSON.
+
+```javascript
+const mongoose = require("mongoose");
+
+const BootcampSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: [true, "Please add a name"],
+    unique: true,
+    trim: true,
+    maxlength: [50, "Name cannot be more than 50 characters"],
+  },
+  slug: String,
+  address: {
+    type: String,
+    required: [true, "Please add an address"],
+  },
+  location: {
+    // GeoJSON Point
+    type: {
+      type: String,
+      enum: ["Point"],
+    },
+    coordinates: {
+      type: [Number],
+      index: "2dsphere",
+    },
+    formattedAddress: String,
+    street: String,
+    city: String,
+    state: String,
+    zipcode: String,
+    country: String,
+  },
+  careers: {
+    // Array of strings
+    type: [String],
+    required: true,
+    enum: [
+      "Web Development",
+      "Mobile Development",
+      "UI/UX",
+      "Data Science",
+      "Business",
+      "Other",
+    ],
+  },
+  averageRating: {
+    type: Number,
+    min: [1, "Rating must be at least 1"],
+    max: [10, "Rating must can not be more than 10"],
+  },
+});
+
+module.exports = mongoose.model("Bootcamp", BootcampSchema);
+```
+
+### Create Bootcamp
+
+To access the request body, we need to use the **json()** middleware from express.
+
+```javascript
+const app = express();
+
+// body parser
+app.use(express.json());
+```
+
+We then use the Bootcamp model and run the create method.
+
+```javascript
+const Bootcamp = require("../models/Bootcamp");
+
+exports.createBootcamp = async (req, res, next) => {
+  try {
+    const bootcamp = await Bootcamp.create(req.body);
+    res.status(201).json({ success: true, data: bootcamp });
+  } catch (err) {
+    res.status(400).json({ success: false });
+  }
+};
+```
+
+## Custom Error Handling Middleware
