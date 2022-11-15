@@ -15,6 +15,7 @@ The API gives the user the ability to search, create, update or delete bootcamp/
     - [Deployment (Digital Ocean)](#deployment-digital-ocean)
     - [Code Related Suggestions](#code-related-suggestions)
   - [Setting up Express Server](#setting-up-express-server)
+  - [Middlewares](#middlewares)
 
 # Functionalities
 
@@ -141,3 +142,96 @@ The API gives the user the ability to search, create, update or delete bootcamp/
 - Create a database seeder to import and destroy data
 
 ## Setting up Express Server
+
+We can send a response and status code easily using Express.
+
+```javascript
+const express = require("express");
+
+const app = express();
+const PORT = process.env.PORT || 5000;
+
+// create routes
+app.get("/", (req, res) => {
+  res.status(200).json({ success: true, data: { message: "Hello" } });
+});
+
+app.listen(
+  PORT,
+  console.log(`Server running in ${process.env.NODE_ENV} on port ${PORT}`)
+);
+```
+
+Using the Express router, we can put related routes into their own files. We can also go ahead and create controller methods for each route.
+
+```javascript
+// controllers/bootcamps.js
+
+// @desc      Get all bootcamps
+// @route     GET /api/v1/bootcamps
+// @access    public
+exports.getBootcamps = (req, res, next) => {
+  res.status(200).json({ success: true, msg: "Show all bootcamps" });
+};
+
+// @desc      Get single bootcamp
+// @route     GET /api/v1/bootcamps/:id
+// @access    public
+exports.getBootcamp = (req, res, next) => {
+  res
+    .status(200)
+    .json({ success: true, msg: `Show bootcamp ${req.params.id}` });
+};
+
+// @desc      Create new bootcamp
+// @route     POST /api/v1/bootcamps
+// @access    private
+exports.createBootcamp = (req, res, next) => {
+  res.status(200).json({ success: true, msg: "Create new bootcamp" });
+};
+
+// @desc      Update bootcamp
+// @route     PUT /api/v1/bootcamps/:id
+// @access    private
+exports.updateBootcamp = (req, res, next) => {
+  res
+    .status(200)
+    .json({ success: true, msg: `Update bootcamp ${req.params.id}` });
+};
+
+// @desc      Delte bootcamp
+// @route     DELETE /api/v1/bootcamps/:id
+// @access    private
+exports.deleteBootcamp = (req, res, next) => {
+  res
+    .status(200)
+    .json({ success: true, msg: `Delete bootcamp ${req.params.id}` });
+};
+```
+
+```javascript
+// routes/bootcamps.js
+
+const {
+  getBootcamps,
+  getBootcamp,
+  createBootcamp,
+  updateBootcamp,
+  deleteBootcamp,
+} = require("../controllers/bootcamps");
+
+const router = express.Router();
+
+router.route("/").get(getBootcamps).post(createBootcamp);
+router
+  .route("/:id")
+  .get(getBootcamp)
+  .put(updateBootcamp)
+  .delete(deleteBootcamp);
+
+module.exports = router;
+```
+
+## Middlewares
+
+Middlewares are functions that have access to the request and response. These can be used for authentication, error handling, etc.
