@@ -20,6 +20,8 @@ The API gives the user the ability to search, create, update or delete bootcamp/
   - [Models](#models)
     - [Create Bootcamp](#create-bootcamp)
   - [Custom Error Handling Middleware](#custom-error-handling-middleware)
+  - [Mongoose Error Handling](#mongoose-error-handling)
+  - [Async Await middleware](#async-await-middleware)
 
 # Functionalities
 
@@ -383,3 +385,103 @@ exports.createBootcamp = async (req, res, next) => {
 ```
 
 ## Custom Error Handling Middleware
+
+For errors returned from async functions invoked by route handlers and middleware, we need to pass the error to the next() function for Express to catch.
+
+```javascript
+exports.getBootcamp = async (req, res, next) => {
+  try {
+  } catch (err) {
+    next(err);
+  }
+};
+```
+
+We can also write our own error handling middleware with custom error responses.
+
+```javascript
+class ErrorResponse extends Error {
+  constructor(message, statusCode) {
+    super(message);
+    this.statusCode = statusCode;
+  }
+}
+
+module.exports = ErrorResponse;
+
+const errorHandler = (err, req, res, next) => {
+  // log to console for dev
+  console.log(err.stack.red);
+
+  res.status(err.statusCode || 500).json({
+    success: false,
+    error: err.message || "Server Error",
+  });
+};
+
+module.exports = errorHandler;
+```
+
+To use the custom ErrorResponse class, we need to instantiate an instance of the class.
+
+```javascript
+catch (err) {
+    // res.status(400).json({ success: false });
+    next(
+      new ErrorResponse(`Bootcamp not found with id of ${req.params.id}`, 404)
+    );
+  }
+```
+
+## Mongoose Error Handling
+
+We can catch specific errors in our errorHandler middleware, rather than catching from the controller method itself.
+
+```javascript
+const ErrorResponse = require("../utils/errorResponse");
+
+const errorHandler = (err, req, res, next) => {
+  let error = {
+    ...err,
+  };
+  error.message = err.message;
+
+  // log to console for dev
+  console.log(err);
+
+  // Mongoose bad ObjectId
+  if (err.name === "CastError") {
+    const message = `Resource not found with id of ${err.value}`;
+    error = new ErrorResponse(message, 404);
+  }
+
+  // Mongoose duplicate key
+  if (err.code === 11000) {
+    const message = "Duplicate field entered";
+    error = new ErrorResponse(message, 400);
+  }
+
+  // Mongoose validators
+  if (err.name === "ValidationError") {
+    const message = Object.values(err.errors).map((val) => val.message);
+    error = new ErrorResponse(message, 400);
+  }
+
+  res.status(error.statusCode || 500).json({
+    success: false,
+    error: error.message || "Server Error",
+  });
+};
+
+module.exports = errorHandler;
+```
+
+```javascript
+catch (err) {
+    next(err);
+  }
+```
+
+## Async Await middleware
+
+We can also create wrapper functions to handle async calls.
