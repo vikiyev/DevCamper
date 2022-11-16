@@ -21,7 +21,8 @@ The API gives the user the ability to search, create, update or delete bootcamp/
     - [Create Bootcamp](#create-bootcamp)
   - [Custom Error Handling Middleware](#custom-error-handling-middleware)
   - [Mongoose Error Handling](#mongoose-error-handling)
-  - [Async Await middleware](#async-await-middleware)
+  - [Async Await Middleware](#async-await-middleware)
+  - [Mongoose Middlewares / Hooks](#mongoose-middlewares--hooks)
 
 # Functionalities
 
@@ -482,6 +483,76 @@ catch (err) {
   }
 ```
 
-## Async Await middleware
+## Async Await Middleware
 
-We can also create wrapper functions to handle async calls.
+We can also create a handler function to handle async calls, instead of repeating async/await on each controller method.
+
+```javascript
+const asyncHandler = (fn) => (req, res, next) =>
+  Promise.resolve(fn(req, res, next)).catch(next);
+
+module.exports = asyncHandler;
+```
+
+```javascript
+exports.getBootcamps = asyncHandler(async (req, res, next) => {
+  const bootcamps = await Bootcamp.find();
+  res
+    .status(200)
+    .json({ success: true, count: bootcamps.length, data: bootcamps });
+});
+```
+
+## Mongoose Middlewares / Hooks
+
+We can use mongoose middlewares for generating a slug upon creating a bootcamp. Document middleware is supported for the following document functions: validate save remove updateOne deleteOne. In Mongoose, a document is an instance of a Model class. In document middleware functions, **this** refers to the document. The **pre()** middleware runs before the record is saved.
+
+```javascript
+BootcampSchema.pre("save", function (next) {
+  this.slug = slugify(this.name, {
+    lower: true,
+  });
+  next();
+});
+```
+
+For the geocode feature, MapQuest and node-geocoder is used.
+
+```javascript
+const NodeGeocoder = require("node-geocoder");
+
+const options = {
+  provider: process.env.GEOCODER_PROVIDER,
+  httpAdapter: "https",
+  apiKey: process.env.GEOCODER_API_KEY,
+  formatter: null,
+};
+
+const geocoder = NodeGeocoder(options);
+
+module.exports = geocoder;
+```
+
+```javascript
+// Geocode & create location field
+BootcampSchema.pre("save", async function (next) {
+  const loc = await geocoder.geocode(this.address);
+
+  // generate geoJSON
+  this.location = {
+    type: "Point",
+    coordinates: [loc[0].longitude, loc[0].latitude],
+    formattedAddress: loc[0].formattedAddress,
+    street: loc[0].streetName,
+    city: loc[0].city,
+    state: loc[0].stateCode,
+    zipcode: loc[0].zipcode,
+    country: loc[0].countryCode,
+  };
+
+  // Do not save the address in DB
+  this.address = undefined;
+
+  next();
+});
+```
