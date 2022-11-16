@@ -23,6 +23,10 @@ The API gives the user the ability to search, create, update or delete bootcamp/
   - [Mongoose Error Handling](#mongoose-error-handling)
   - [Async Await Middleware](#async-await-middleware)
   - [Mongoose Middlewares / Hooks](#mongoose-middlewares--hooks)
+  - [Retrieve Bootcamps within Radius](#retrieve-bootcamps-within-radius)
+  - [Filtering](#filtering)
+  - [Selecting Certain Fields and Sorting](#selecting-certain-fields-and-sorting)
+  - [Pagination](#pagination)
 
 # Functionalities
 
@@ -554,5 +558,144 @@ BootcampSchema.pre("save", async function (next) {
   this.address = undefined;
 
   next();
+});
+```
+
+## Retrieve Bootcamps within Radius
+
+Since we are using GeoJSON, we can compute for the radius of a location. The mongoDB **centerSphere** returns documents within bounds of a given radius.
+
+https://www.mongodb.com/docs/manual/reference/operator/query/centerSphere/
+
+```javascript
+exports.getBootcampsInRadius = asyncHandler(async (req, res, next) => {
+  const { zipcode, distance } = req.params;
+
+  // get the lat long from geocoder
+  const loc = await geocoder.geocode(zipcode);
+  const lat = loc[0].latitude;
+  const long = loc[0].longitude;
+
+  // calculate radius using radians
+  // divide distance by radius of the earth (3963mi 6378km)
+  const radius = distance / 3963;
+
+  const bootcamps = await Bootcamp.find({
+    location: {
+      $geoWithin: { $centerSphere: [[long, lat], radius] },
+    },
+  });
+
+  res
+    .status(200)
+    .json({ success: true, count: bootcamps.length, data: bootcamps });
+});
+```
+
+## Filtering
+
+Express allows us to easily access the request params using **req.query**. Using [mongo operators](https://www.mongodb.com/docs/manual/reference/operator/query/) such as `$lte`, we can filter out the response. For example, the query parameters `?averageCost[lte]=10000` will search for bootcamps with average cost less than 10000. `?careers[in]=Business` will search for bootcamps where the careers array contains Business.
+
+```javascript
+exports.getBootcamps = asyncHandler(async (req, res, next) => {
+  let query;
+  let queryStr = JSON.stringify(req.query);
+
+  // gt -> $gt
+  queryStr = queryStr.replace(
+    /\b(gt|gte|lt|lte|in)\b/g,
+    (match) => `$${match}`
+  );
+  console.log(queryStr);
+
+  query = Bootcamp.find(JSON.parse(queryStr));
+  const bootcamps = await query;
+  res
+    .status(200)
+    .json({ success: true, count: bootcamps.length, data: bootcamps });
+});
+```
+
+## Selecting Certain Fields and Sorting
+
+When we use the query parameters `?select=name,description&sort=-name`, only the name and description fields should be returned. Mongoose allows us to select only the required fields by chaining **select()** method on the query. Wecan instantiate the removeFields array, which contains parameters that we need to exclude. We loop through this array and delete them from the query object.
+
+The results will be sorted according to name, in descending order due to the **-**
+
+```javascript
+// copy the request query
+const reqQuery = { ...req.query };
+
+// fields to exclude from the query
+const removeFields = ["select", "sort"];
+
+// loop over removeFields and delete them from the request query
+removeFields.forEach((param) => delete reqQuery[param]);
+
+// find resource
+query = Bootcamp.find(JSON.parse(queryStr));
+
+// select only relevant fields if the request param has the select option
+if (req.query.select) {
+  // split fields into an array then join into a string separated by spaces
+  const fields = req.query.select.split(",").join(" ");
+  query = query.select(fields);
+}
+
+// sort
+if (req.query.sort) {
+  const sortBy = req.query.sort.split(",").join(" ");
+  query = query.sort(sortBy);
+} else {
+  // default sort by date
+  query = query.sort("-createdAt");
+}
+
+// execute query
+const bootcamps = await query;
+```
+
+Since the select fields will be comma separated, we can use the split method to turn it to an array, and then join it into a string.
+
+## Pagination
+
+For pagination, we can exclude the parameters page and limit. Using mongoose **skip**, we can skip a number of documents, while **limit** will only return the specified number of documents.
+
+We can then create a new property called pagination and attach it to our response object.
+
+```javascript
+// pagination
+const page = parseInt(req.query.page, 10) || 1;
+const limit = parseInt(req.query.limit, 10) || 1;
+const startIndex = (page - 1) * limit;
+const endIndex = page * limit;
+const total = await Bootcamp.countDocuments();
+
+query = query.skip(startIndex).limit(limit);
+
+// execute query
+const bootcamps = await query;
+
+// pagination result
+const pagination = {};
+if (endIndex < total) {
+  pagination.next = {
+    page: page + 1,
+    limit: limit,
+  };
+}
+
+if (startIndex > 0) {
+  pagination.prev = {
+    page: page - 1,
+    limit: limit,
+  };
+}
+
+res.status(200).json({
+  success: true,
+  count: bootcamps.length,
+  pagination,
+  data: bootcamps,
 });
 ```
