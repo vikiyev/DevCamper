@@ -34,6 +34,10 @@ The API gives the user the ability to search, create, update or delete bootcamp/
   - [Aggregation](#aggregation)
   - [Photo Upload](#photo-upload)
   - [Advanced Results Middleware](#advanced-results-middleware)
+  - [User Registration and Password Encryption](#user-registration-and-password-encryption)
+  - [JSON Web Token](#json-web-token)
+  - [Logging in](#logging-in)
+  - [Sending JWT Cookies](#sending-jwt-cookies)
 
 # Functionalities
 
@@ -939,4 +943,108 @@ exports.getBootcamps = asyncHandler(async (req, res, next) => {
   // console.log(req.query)
   res.status(200).json(res.advancedResults);
 });
+```
+
+## User Registration and Password Encryption
+
+We can create a middelware using mongoose **pre** middleware. We use the bcryptjs library to both generate a salt and hash the password.
+
+```javascript
+UserSchema.pre("save", async function (next) {
+  const salt = await bcrypt.genSalt(10);
+  this.password = await bcrypt.hash(this.password, salt);
+});
+```
+
+## JSON Web Token
+
+We can create a mongoose method for generating JWT using jsonwebtoken. **this** pertains to the actual user object itself.
+
+```javascript
+UserSchema.methods.getSignedJwtToken = function () {
+  return jwt.sign({ id: this._id }, process.env.JWT_SECRET, {
+    expiresIn: process.env.JWT_EXPIRE,
+  });
+};
+```
+
+```javascript
+// create token
+const token = user.getSignedJwtToken();
+
+res.status(200).json({
+  success: true,
+  token: token,
+});
+```
+
+## Logging in
+
+We can create a model method for comparing the plain text password to the one hashed password from the database.
+
+```javascript
+exports.login = asyncHandler(async (req, res, next) => {
+  const { email, password } = req.body;
+
+  // validate email and password
+  if (!email || !password) {
+    return next(new ErrorResponse(`Please provide email and password`, 400));
+  }
+
+  // check for the user
+  const user = await User.findOne({ email: email }).select("+password");
+
+  if (!user) {
+    return next(new ErrorResponse(`Invalid credentials`, 401));
+  }
+
+  // check if passwords match
+  const isMatch = await user.matchPassword(password);
+
+  if (!isMatch) {
+    return next(new ErrorResponse("Invalid credentials", 401));
+  }
+
+  // create token
+  const token = user.getSignedJwtToken();
+
+  res.status(200).json({
+    success: true,
+    token: token,
+  });
+});
+```
+
+```javascript
+UserSchema.methods.matchPassword = async function (enteredPassword) {
+  return await bcrypt.compare(enteredPassword, this.password);
+};
+```
+
+## Sending JWT Cookies
+
+To store cookies, we use cookike-parser middleware.
+
+```javascript
+app.use(cookieParser());
+```
+
+```javascript
+// get token from model, create cookie and send response
+const sendTokenResponse = (user, statusCode, res) => {
+  // create token
+  const token = user.getSignedJwtToken();
+
+  const options = {
+    expires: new Date(
+      Date.now() + process.env.JWT_COOKIE_EXPIRE * 24 * 60 * 60 * 1000
+    ),
+    httpOnly: true,
+  };
+
+  res
+    .status(statusCode)
+    .cookie("token", token, options)
+    .json({ success: true, token });
+};
 ```
