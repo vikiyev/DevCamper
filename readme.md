@@ -32,6 +32,8 @@ The API gives the user the ability to search, create, update or delete bootcamp/
     - [Reverse Populate](#reverse-populate)
     - [Cascade Delete](#cascade-delete)
   - [Aggregation](#aggregation)
+  - [Photo Upload](#photo-upload)
+  - [Advanced Results Middleware](#advanced-results-middleware)
 
 # Functionalities
 
@@ -837,5 +839,104 @@ CourseSchema.post("save", function () {
 // call getAverageCost before remove
 CourseSchema.pre("remove", function () {
   this.constructor.getAverageCost(this.bootcamp);
+});
+```
+
+## Photo Upload
+
+For file uploading, we use the express-fileupload middleware. We can expose out the public folder using **express.static()**
+
+```javascript
+// file uploading
+app.use(fileupload());
+
+// set static folder
+app.use(express.static(path.join(__dirname, "public")));
+```
+
+```javascript
+exports.bootcampPhotoUpload = asyncHandler(async (req, res, next) => {
+  const bootcamp = await Bootcamp.findById(req.params.id);
+
+  if (!bootcamp) {
+    return next(
+      new ErrorResponse(`Bootcamp not found with id of ${req.params.id}`, 404)
+    );
+  }
+
+  if (!req.files) {
+    return next(new ErrorResponse("Please upload a file", 400));
+  }
+
+  const file = req.files.file;
+  // make sure that the image is a photo
+  if (!file.mimetype.startsWith("image")) {
+    return next(new ErrorResponse("Please upload an image", 400));
+  }
+
+  // limit file size
+  if (file.size > process.env.MAX_FILE_UPLOAD) {
+    return next(
+      new ErrorResponse(
+        `Maximum file size of ${process.env.MAX_FILE_UPLOAD}`,
+        400
+      )
+    );
+  }
+
+  // create custom filename
+  file.name = `photo_${bootcamp._id}${path.parse(file.name).ext}`;
+
+  // upload the file
+  file.mv(`${process.env.FILE_UPLOAD_PATH}/${file.name}`, async (err) => {
+    if (err) {
+      console.error(err);
+      return next(new ErrorResponse(`Error with file upload`, 500));
+    }
+
+    await Bootcamp.findByIdAndUpdate(req.params.id, { photo: file.name });
+
+    res.status(200).json({ success: true, data: file.name });
+  });
+});
+```
+
+## Advanced Results Middleware
+
+We can offload the functionality of filtering, select, sorting, and pagination into a middleware instead of directly defining them in the controller methods.
+
+```javascript
+const advancedResults = (model, populate) => async (req, res, next) => {
+  ...
+  if (populate) {
+    query = query.populate(populate);
+  }
+
+  res.advancedResults = {
+    success: true,
+    count: results.length,
+    pagination: pagination,
+    data: results,
+  };
+
+  next();
+};
+
+module.exports = advancedResults;
+```
+
+```javascript
+const Bootcamp = require("../models/Bootcamp");
+
+// advancedResults middleware
+const advancedResults = require("../middleware/advancedResults");
+
+router.route("/").get(advancedResults(Bootcamp, "courses"), getBootcamps);
+```
+
+```javascript
+exports.getBootcamps = asyncHandler(async (req, res, next) => {
+  // console.log(req.query)
+  res.status(200).json(res.advancedResults);
 });
 ```
