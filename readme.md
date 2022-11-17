@@ -27,6 +27,11 @@ The API gives the user the ability to search, create, update or delete bootcamp/
   - [Filtering](#filtering)
   - [Selecting Certain Fields and Sorting](#selecting-certain-fields-and-sorting)
   - [Pagination](#pagination)
+  - [Relationship between documents](#relationship-between-documents)
+    - [Populate](#populate)
+    - [Reverse Populate](#reverse-populate)
+    - [Cascade Delete](#cascade-delete)
+  - [Aggregation](#aggregation)
 
 # Functionalities
 
@@ -697,5 +702,140 @@ res.status(200).json({
   count: bootcamps.length,
   pagination,
   data: bootcamps,
+});
+```
+
+## Relationship between documents
+
+To add a bootcamp that a course is related to, we use the special type **ObjectID** on the schema.
+
+```javascript
+const mongoose = require("mongoose");
+
+const CourseSchema = new mongoose.Schema({
+  bootcamp: {
+    type: mongoose.Schema.ObjectId,
+    ref: "Bootcamp",
+    required: true,
+  },
+});
+
+module.exports = mongoose.model("Course", CourseSchema);
+```
+
+In the router file for bootcamps, we can re-route the router for `/bootcamps/:bootcampId/courses`
+
+```javascript
+// /routes/bootcamps.js
+
+// Include other resource routers
+const courseRouter = require("./courses");
+
+const router = express.Router();
+
+// reroute into other resource routers
+router.use("/:bootcampId/courses", courseRouter);
+```
+
+```javascript
+// /routes/courses.js
+const router = express.Router({ mergeParams: true });
+
+router.route("/").get(getCourses);
+```
+
+### Populate
+
+Populate is used to populate the bootcamp field returned by the courses query with data.
+
+```javascript
+query = Course.find().populate({
+  path: "bootcamp",
+  select: "name description",
+});
+```
+
+### Reverse Populate
+
+We also want to show an array of courses related to a bootcamp. We can use mongoose [virtuals](https://mongoosejs.com/docs/guide.html#virtuals) for this. We need to add the following to the bootcamp model:
+
+```javascript
+const BootcampSchema = new mongoose.Schema(
+  {},
+  {
+    toJSON: {
+      virtuals: true,
+    },
+    toObject: {
+      virtuals: true,
+    },
+  }
+);
+
+// reverse populate with virtuals
+BootcampSchema.virtual("courses", {
+  ref: "Course",
+  localField: "_id",
+  foreignField: "bootcamp",
+  justOne: false,
+});
+```
+
+```javascript
+query = Bootcamp.find(JSON.parse(queryStr)).populate("courses");
+```
+
+### Cascade Delete
+
+We need to delete all related courses as well when we delete a bootcamp. We can use the mongoose **pre** middleware.
+
+```javascript
+// cascade delete related courses when a bootcamp is deleted
+BootcampSchema.pre("remove", async function (next) {
+  await this.model("Course").deleteMany({ bootcamp: this._id });
+  next();
+});
+```
+
+## Aggregation
+
+We create a middleware for calculating the average of the tuition of courses in a bootcamp. Statics in mongoose are called on the model itself while methods are called on the instance of a model. We use mongoose **aggregate** method to build pipelines. We match the bootcamp according to the bootcamp id passed.
+
+```javascript
+// static method to get average of course tuitions
+CourseSchema.statics.getAverageCost = async function (bootcampId) {
+  console.log("calculating average cost...".blue);
+
+  // returns an object with the id of the bootcamp and average of the course tuitions
+  const obj = await this.aggregate([
+    {
+      $match: { bootcamp: bootcampId },
+    },
+    {
+      $group: {
+        _id: "$bootcamp",
+        averageCost: { $avg: "$tuition" },
+      },
+    },
+  ]);
+
+  // console.log(obj);
+  try {
+    await this.model("Bootcamp").findByIdAndUpdate(bootcampId, {
+      averageCost: Math.ceil(obj[0].averageCost / 10) * 10,
+    });
+  } catch (error) {
+    console.error(error);
+  }
+};
+
+// call getAverageCost after save
+CourseSchema.post("save", function () {
+  this.constructor.getAverageCost(this.bootcamp);
+});
+
+// call getAverageCost before remove
+CourseSchema.pre("remove", function () {
+  this.constructor.getAverageCost(this.bootcamp);
 });
 ```
