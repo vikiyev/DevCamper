@@ -6,14 +6,14 @@ The API gives the user the ability to search, create, update or delete bootcamp/
 
 - [DevCamper](#devcamper)
 - [Functionalities](#functionalities)
-    - [Bootcamps](#bootcamps)
-    - [Courses](#courses)
-    - [Reviews](#reviews)
-    - [Users & Authentication](#users--authentication)
-    - [Security](#security)
-    - [Documentation](#documentation)
-    - [Deployment (Digital Ocean)](#deployment-digital-ocean)
-    - [Code Related Suggestions](#code-related-suggestions)
+  - [Bootcamps](#bootcamps)
+  - [Courses](#courses)
+  - [Reviews](#reviews)
+  - [Users & Authentication](#users--authentication)
+  - [Security](#security)
+  - [Documentation](#documentation)
+  - [Deployment (Digital Ocean)](#deployment-digital-ocean)
+  - [Code Related Suggestions](#code-related-suggestions)
   - [Setting up Express Server](#setting-up-express-server)
   - [Middlewares](#middlewares)
   - [MongoDB](#mongodb)
@@ -41,6 +41,9 @@ The API gives the user the ability to search, create, update or delete bootcamp/
   - [Auth Protect Middleware](#auth-protect-middleware)
   - [Role Authorization](#role-authorization)
   - [Ownership](#ownership)
+  - [Forgot Password Token](#forgot-password-token)
+  - [Sending Email](#sending-email)
+  - [Resetting Password](#resetting-password)
 
 # Functionalities
 
@@ -1174,4 +1177,146 @@ if (bootcamp.user.toString() !== req.user.id && req.user.role !== "admin") {
     )
   );
 }
+```
+
+## Forgot Password Token
+
+We can have a user send an email to a route and generate a token. We can create a model method for generating a reset token using node **crypto**.
+
+```javascript
+UserSchema.methods.getResetPasswordToken = function () {
+  const resetToken = crypto.randomBytes(20).toString("hex");
+  // hash the token and set to resetPasswordToken field
+  this.resetPasswordToken = crypto
+    .createHash("sha256")
+    .update(resetToken)
+    .digest("hex");
+
+  // set expiry in 10 mins
+  this.resetPasswordExpire = Date.now() + 10 * 60 * 1000;
+
+  return resetToken;
+};
+```
+
+We then add our controller method.
+
+```javascript
+exports.forgotPassword = asyncHandler(async (req, res, next) => {
+  const user = await User.findOne({
+    email: req.body.email,
+  });
+
+  if (!user) {
+    return next(
+      new ErrorResponse(`User with email ${req.body.email} not found`, 404)
+    );
+  }
+
+  // get the reset token
+  const resetToken = user.getResetPasswordToken();
+  await user.save({ validateBeforeSave: false });
+
+  res.status(200).json({
+    success: true,
+    data: user,
+  });
+});
+```
+
+## Sending Email
+
+We use the nodemailer package and mailtrap to send an email with the token. We first create a utility function using the [sample](https://nodemailer.com/about/) from nodemailer for sending an email.
+
+```javascript
+const sendEmail = async (options) => {
+  // create reusable transporter object using the default SMTP transport
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: process.env.SMTP_PORT,
+    auth: {
+      user: process.env.SMTP_EMAIL,
+      pass: process.env.SMTP_PASSWORD,
+    },
+  });
+
+  // send mail with defined transport object
+  const message = {
+    from: `${process.env.FROM_NAME} <${process.env.FROM_EMAIL}>`,
+    to: options.email, // list of receivers
+    subject: options.subject, // Subject line
+    text: options.message, // plain text body
+  };
+
+  const info = await transporter.sendMail(message);
+
+  console.log("Message sent: %s", info.messageId);
+  // Message sent: <b658f8ca-6296-ccf4-8306-87d57a0b4321@example.com>
+};
+
+module.exports = sendEmail;
+```
+
+We can now update the controller method for generating a reset token to include the email functionality.
+
+```javascript
+const resetUrl = `${req.protocol}://${req.get(
+  "host"
+)}/api/v1/auth/resetpassword/${resetToken}`;
+
+const message = `You are receiving this email because you requested a password reset. Please make a PUT request to: \n\n ${resetUrl}`;
+
+try {
+  await sendEmail({
+    email: user.email,
+    subject: "Password reset token",
+    message,
+  });
+
+  res.status(200).json({ success: true, data: "Email sent" });
+} catch (error) {
+  console.error(error);
+  user.resetPasswordToken = undefined;
+  user.resetPasswordExpire = undefined;
+
+  await user.save({ validateBeforeSave: false });
+
+  return next(new ErrorResponse(`Email could not be sent`, 500));
+}
+```
+
+## Resetting Password
+
+We need to create a route and controller wherein the user can send a PUT request with the new password for resetting the old password.
+
+```javascript
+exports.resetPassword = asyncHandler(async (req, res, next) => {
+  // get hashed token
+  const resetPasswordToken = crypto
+    .createHash("sha256")
+    .update(req.params.resettoken)
+    .digest("hex");
+
+  const user = await User.findOne({
+    resetPasswordToken,
+    resetPasswordExpire: { $gt: Date.now() },
+  });
+
+  if (!user) {
+    return next(new ErrorResponse("Invalid token", 400));
+  }
+
+  // set the new password
+  user.password = req.body.password;
+  user.resetPasswordToken = undefined;
+  user.resetPasswordExpire = undefined;
+  await user.save();
+
+  sendTokenResponse(user, 200, res);
+
+  res.status(200).json({
+    success: true,
+    data: user,
+  });
+});
 ```
