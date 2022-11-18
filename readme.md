@@ -1131,3 +1131,47 @@ router
 ```
 
 ## Ownership
+
+We need to associate a user to the bootcamp model and link the user to the bootcamp.
+
+```javascript
+    user: {
+      type: mongoose.Schema.ObjectId,
+      ref: "User",
+      required: true,
+    },
+```
+
+```javascript
+exports.createBootcamp = asyncHandler(async (req, res, next) => {
+  // add user to request body from the middleware
+  req.body.user = req.user.id;
+
+  // limit to one bootcamp per publisher, if admin, can add multiple bootcamps
+  const publishedBootcamp = await Bootcamp.findOne({ user: req.user.id });
+
+  if (publishedBootcamp && req.user.role !== 'admin') {
+    return next(
+      new ErrorResponse(
+        `The user with id ${req.user.id} has already published a bootcmap`,
+        400
+      )
+    );
+  }
+
+  const bootcamp = await Bootcamp.create(req.body);
+  res.status(201).json({ success: true, data: bootcamp });
+```
+
+In the controller methods, we can add a conditional for checking if the user is the owner of a resource, or if they are an admin.
+
+```javascript
+if (bootcamp.user.toString() !== req.user.id && req.user.role !== "admin") {
+  return next(
+    new ErrorResponse(
+      `User ${req.params.id} is not authorized to update this resource`,
+      401
+    )
+  );
+}
+```

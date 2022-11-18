@@ -48,11 +48,24 @@ exports.getCourse = asyncHandler(async (req, res, next) => {
 // @access    private
 exports.addCourse = asyncHandler(async (req, res, next) => {
   req.body.bootcamp = req.params.bootcampId;
+  req.body.user = req.user.id;
 
   const bootcamp = await Bootcamp.findById(req.params.bootcampId);
 
   if (!bootcamp) {
-    new ErrorResponse(`No bootcamp with the id of ${req.parmas.bootcampId}`);
+    return next(
+      new ErrorResponse(`No bootcamp with the id of ${req.params.bootcampId}`)
+    );
+  }
+
+  // make sure user is the owner of the bootcamp, or an admin
+  if (bootcamp.user.toString() !== req.user.id && req.user.role !== "admin") {
+    return next(
+      new ErrorResponse(
+        `User ${req.user.id} is not authorized to add a course to bootcamp ${bootcamp._id}`,
+        401
+      )
+    );
   }
 
   // create the course
@@ -70,7 +83,17 @@ exports.updateCourse = asyncHandler(async (req, res, next) => {
   let course = await Course.findById(req.params.id);
 
   if (!course) {
-    new ErrorResponse(`No course with the id of ${req.parmas.bootcampId}`);
+    return next(new ErrorResponse(`No course with the id of ${req.params.id}`));
+  }
+
+  // make sure user is the owner of the course, or an admin
+  if (course.user.toString() !== req.user.id && req.user.role !== "admin") {
+    return next(
+      new ErrorResponse(
+        `User ${req.user.id} is not authorized to update course ${course._id}`,
+        401
+      )
+    );
   }
 
   course = await Course.findByIdAndUpdate(req.params.id, req.body, {
@@ -91,7 +114,17 @@ exports.deleteCourse = asyncHandler(async (req, res, next) => {
   const course = await Course.findById(req.params.id);
 
   if (!course) {
-    new ErrorResponse(`No course with the id of ${req.parmas.bootcampId}`);
+    return next(new ErrorResponse(`No course with the id of ${req.params.id}`));
+  }
+
+  // make sure user is the owner of the course, or an admin
+  if (course.user.toString() !== req.user.id && req.user.role !== "admin") {
+    return next(
+      new ErrorResponse(
+        `User ${req.user.id} is not authorized to delete course ${course._id}`,
+        401
+      )
+    );
   }
 
   await course.remove();
