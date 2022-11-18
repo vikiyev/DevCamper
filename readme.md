@@ -38,6 +38,9 @@ The API gives the user the ability to search, create, update or delete bootcamp/
   - [JSON Web Token](#json-web-token)
   - [Logging in](#logging-in)
   - [Sending JWT Cookies](#sending-jwt-cookies)
+  - [Auth Protect Middleware](#auth-protect-middleware)
+  - [Role Authorization](#role-authorization)
+  - [Ownership](#ownership)
 
 # Functionalities
 
@@ -1048,3 +1051,83 @@ const sendTokenResponse = (user, statusCode, res) => {
     .json({ success: true, token });
 };
 ```
+
+## Auth Protect Middleware
+
+The token will be need to sent in the headers under the authorization bearer. We create a new middleware for verifying the token.
+
+```javascript
+exports.protect = asyncHandler(async (req, res, next) => {
+  let token;
+
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith("Bearer")
+  ) {
+    token = req.headers.authorization.split(" ")[1];
+  }
+
+  if (!token) {
+    return next(new ErrorResponse("Not authorized to access this route", 401));
+  }
+
+  try {
+    // verify token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log(decoded);
+    req.user = await User.findById(decoded.id);
+    next();
+  } catch (error) {
+    return next(new ErrorResponse("Not authorized to access this route", 401));
+  }
+});
+```
+
+We can use the middleware by passing it as a parameter to our routes.
+
+```javascript
+router.route("/:id").put(protect, updateCourse).delete(protect, deleteCourse);
+```
+
+We can now retrieve the current user by creating an endpoint for a GET request at `/auth/me`
+
+```javascript
+exports.getMe = asyncHandler(async (req, res, next) => {
+  const user = await User.findById(req.user.id);
+
+  res.status(200).json({
+    success: true,
+    data: user,
+  });
+});
+```
+
+## Role Authorization
+
+We also need a middleware for authorization based on roles
+
+```javascript
+exports.authorize =
+  (...roles) =>
+  (req, res, next) => {
+    if (!roles.includes(req.user.role)) {
+      return next(
+        new ErrorResponse(
+          `User role ${req.user.role} is unauthorized to access this route`,
+          403
+        )
+      );
+    }
+    next();
+  };
+```
+
+```javascript
+router
+  .route("/:id")
+  .get(getBootcamp)
+  .put(protect, authorize("publisher", "admin"), updateBootcamp)
+  .delete(protect, authorize("publisher", "admin"), deleteBootcamp);
+```
+
+## Ownership
