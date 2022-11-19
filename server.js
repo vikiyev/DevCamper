@@ -47,7 +47,7 @@ app.use(fileupload());
 
 // sanitize data, set security headers, prevent XSS HPP, enable cors
 app.use(mongoSanitize());
-app.use(helmet());
+app.use(helmet({ contentSecurityPolicy: false })); // to make index.html javascript work
 app.use(xss());
 app.use(hpp());
 app.use(cors());
@@ -71,11 +71,6 @@ app.use("/api/v1/users", users);
 app.use("/api/v1/reviews", reviews);
 
 app.use(errorHandler);
-
-// create routes
-app.get("/", (req, res) => {
-  res.status(200).json({ success: true, data: { message: "Hello" } });
-});
 
 const server = app.listen(
   PORT,

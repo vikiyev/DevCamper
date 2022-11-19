@@ -1,10 +1,57 @@
 # DevCamper
 
-A REST API built from scratch using Nodejs, Express and MongoDB integration. This API features middlewares for routing and authentication. This project is from Brad Traversy's course [Node.js API Masterclass With Express & MongoDB](https://www.udemy.com/course/nodejs-api-masterclass/).
+A Backend REST API built using Nodejs, Express and integrates with MongoDB. This API features middlewares for routing and authentication. This project is from Brad Traversy's course [Node.js API Masterclass With Express & MongoDB](https://www.udemy.com/course/nodejs-api-masterclass/).
 
 The API gives the user the ability to search, create, update or delete bootcamp/courses, read reviews and ratings. Authentication is done using JWT and cookies. Password encryption and preventing NoSQL injections and XSS are also considered. The documentation is created via Postman and docgen.
 
+# Dockerize
+
+run the command for building image: `docker build . -t <your username>/<app-name>`
+run the image: `docker run -p 49160:5000 -d <your username>/<app-name>`
+
+App will be available in port 49160
+
+# Usage
+
+Rename `config/config.env.env` to `config/config.env` and update the environment variables.
+
+# Install dependencies
+
+```
+npm install
+```
+
+# Run app
+
+```
+# Run in dev mode
+npm run dev
+
+# Run in prod
+npm start
+```
+
+# Seed database
+
+To seed the database with users, bootcamps, courses and reviews with data from the "\_data" folder, run
+
+```
+# Destroy data
+node seeder -d
+
+# Import data
+node seeder -i
+```
+
+# Contents
+
 - [DevCamper](#devcamper)
+- [Dockerize](#dockerize)
+- [Usage](#usage)
+- [Install dependencies](#install-dependencies)
+- [Run app](#run-app)
+- [Seed database](#seed-database)
+- [Contents](#contents)
 - [Functionalities](#functionalities)
     - [Bootcamps](#bootcamps)
     - [Courses](#courses)
@@ -50,6 +97,9 @@ The API gives the user the ability to search, create, update or delete bootcamp/
   - [XSS Protection](#xss-protection)
   - [Rate Limit and HTTP Param Pollution](#rate-limit-and-http-param-pollution)
   - [CORS](#cors)
+  - [Documentation](#documentation-1)
+  - [Deployment (Digital Ocean)](#deployment-digital-ocean-1)
+  - [Domain Server](#domain-server)
 
 # Functionalities
 
@@ -1376,6 +1426,11 @@ app.use(mongoSanitize());
 
 The helmet middleware adds a bunch of header values that can help make our API more secure.
 
+```javascript
+const helmet = require("helmet");
+app.use(helmet({ contentSecurityPolicy: false })); // to make index.html javascript work
+```
+
 ## XSS Protection
 
 XSS is when we embed malicious code such as script tags on the database values. xss-clean sanitizes input and prevents cross site scripting.
@@ -1419,4 +1474,38 @@ If we were to make a request from another domain, it would be rejected. The cors
 ```javascript
 const cors = require("cors");
 app.use(cors());
+```
+
+## Documentation
+
+We can generate documentation using Postman and [docgen](https://github.com/thedevsaddam/docgen) to create HTML from the postman documentation which we can add to the index page of our API. In Postman, we can export the DevCamper API collection as v2.1 and then run the binary. The generated index.html file can be placed under `/public`
+
+```
+./docgen build -i DevCamper.postman_collection.json -o index.html
+```
+
+## Deployment (Digital Ocean)
+
+[gist](https://gist.github.com/bradtraversy/cd90d1ed3c462fe3bddd11bf8953a896)
+
+- PM2 can be used to keep the app running
+- To automatically start the app whenever the server is started, we can use the command `pm2 startup ubuntu`.
+- Nginx can be used to setup a reverse proxy so that when we hit port 80, the server will forward it to 5000
+- Nginx is also used to disable other ports
+
+## Domain Server
+
+- add custom DNS to namecheap:
+
+```
+ns1.digitalocean.com
+ns2.digitalocean.com
+ns3.digitalocean.com
+```
+
+- In the digital ocean Networking, we need to add the domain and create A records.
+
+```
+@
+www
 ```
