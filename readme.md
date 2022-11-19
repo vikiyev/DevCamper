@@ -6,14 +6,14 @@ The API gives the user the ability to search, create, update or delete bootcamp/
 
 - [DevCamper](#devcamper)
 - [Functionalities](#functionalities)
-  - [Bootcamps](#bootcamps)
-  - [Courses](#courses)
-  - [Reviews](#reviews)
-  - [Users & Authentication](#users--authentication)
-  - [Security](#security)
-  - [Documentation](#documentation)
-  - [Deployment (Digital Ocean)](#deployment-digital-ocean)
-  - [Code Related Suggestions](#code-related-suggestions)
+    - [Bootcamps](#bootcamps)
+    - [Courses](#courses)
+    - [Reviews](#reviews)
+    - [Users & Authentication](#users--authentication)
+    - [Security](#security)
+    - [Documentation](#documentation)
+    - [Deployment (Digital Ocean)](#deployment-digital-ocean)
+    - [Code Related Suggestions](#code-related-suggestions)
   - [Setting up Express Server](#setting-up-express-server)
   - [Middlewares](#middlewares)
   - [MongoDB](#mongodb)
@@ -44,6 +44,12 @@ The API gives the user the ability to search, create, update or delete bootcamp/
   - [Forgot Password Token](#forgot-password-token)
   - [Sending Email](#sending-email)
   - [Resetting Password](#resetting-password)
+  - [Clearing Token Cookie on Logout](#clearing-token-cookie-on-logout)
+  - [Injection and Sanitizing Data](#injection-and-sanitizing-data)
+  - [Security Headers](#security-headers)
+  - [XSS Protection](#xss-protection)
+  - [Rate Limit and HTTP Param Pollution](#rate-limit-and-http-param-pollution)
+  - [CORS](#cors)
 
 # Functionalities
 
@@ -1319,4 +1325,98 @@ exports.resetPassword = asyncHandler(async (req, res, next) => {
     data: user,
   });
 });
+```
+
+## Clearing Token Cookie on Logout
+
+We use the following code on our auth protect middleware, which checks the headers then the cookies for the token.
+
+```javascript
+exports.protect = asyncHandler(async (req, res, next) => {
+  let token;
+
+  // check headers for token. if none, check the cookie
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith("Bearer")
+  ) {
+    token = req.headers.authorization.split(" ")[1];
+  } else if (req.cookies.token) {
+    token = req.cookies.token;
+  }
+```
+
+We can access the res.cookie property thanks to the cookie-parser middleware.
+
+```javascript
+exports.logout = asyncHandler(async (req, res, next) => {
+  res.cookie("token", "none", {
+    expires: new Date(Date.now() + 10 * 1000),
+    httpOnly: true,
+  });
+
+  res.status(200).json({
+    success: true,
+    data: {},
+  });
+});
+```
+
+## Injection and Sanitizing Data
+
+express-mongo-sanitize middleware can be used to sanitize data.
+
+```javascript
+const mongoSanitize = require("express-mongo-sanitize");
+// sanitize
+app.use(mongoSanitize());
+```
+
+## Security Headers
+
+The helmet middleware adds a bunch of header values that can help make our API more secure.
+
+## XSS Protection
+
+XSS is when we embed malicious code such as script tags on the database values. xss-clean sanitizes input and prevents cross site scripting.
+
+```json
+"data": {
+        "name": "TEST2<script>alert(1)</script>",
+}
+```
+
+```javascript
+const xss = require("xss-clean");
+app.use(xss());
+```
+
+## Rate Limit and HTTP Param Pollution
+
+Using express-rate-limit, we can limit requests within a certain amount of time.
+
+hpp library can be used to protect against HTTP parameter pollution attacks.
+
+```javascript
+const rateLimit = require("express-rate-limit");
+const hpp = require("hpp");
+
+app.use(hpp());
+
+// rate limiter
+const limiter = rateLimit({
+  windowMs: 10 * 60 * 1000, // 10 mins
+  max: 1, // max requests
+});
+
+app.use(limiter);
+```
+
+## CORS
+
+If we were to make a request from another domain, it would be rejected. The cors package can be used to enable cross origin resource sharing.
+
+```javascript
+const cors = require("cors");
+app.use(cors());
 ```
