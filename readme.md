@@ -4,12 +4,17 @@ A Backend REST API built using Nodejs, Express and integrates with MongoDB. This
 
 The API gives the user the ability to search, create, update or delete bootcamp/courses, read reviews and ratings. Authentication is done using JWT and cookies. Password encryption and preventing NoSQL injections and XSS are also considered. The documentation is created via Postman and docgen.
 
+Hosted via [render](https://devcamper-vikiyev.onrender.com)
+
 # Dockerize
 
 run the command for building image: `docker build . -t <your username>/<app-name>`
 run the image: `docker run -p 49160:5000 -d <your username>/<app-name>`
 
 App will be available in port 49160
+
+to do: dockerize nginx
+https://ashwin9798.medium.com/nginx-with-docker-and-node-js-a-beginners-guide-434fe1216b6b
 
 # Usage
 
@@ -56,7 +61,7 @@ node seeder -i
     - [Bootcamps](#bootcamps)
     - [Courses](#courses)
     - [Reviews](#reviews)
-    - [Users & Authentication](#users--authentication)
+    - [Users \& Authentication](#users--authentication)
     - [Security](#security)
     - [Documentation](#documentation)
     - [Deployment (Digital Ocean)](#deployment-digital-ocean)
