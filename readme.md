@@ -6,105 +6,9 @@ The API gives the user the ability to search, create, update or delete bootcamp/
 
 Hosted via [render](https://devcamper-vikiyev.onrender.com)
 
-# Dockerize
+# Completion
 
-run the command for building image: `docker build . -t <your username>/<app-name>`
-run the image: `docker run -p 49160:5000 -d <your username>/<app-name>`
-
-App will be available in port 49160
-
-to do: dockerize nginx
-https://ashwin9798.medium.com/nginx-with-docker-and-node-js-a-beginners-guide-434fe1216b6b
-
-# Usage
-
-Rename `config/config.env.env` to `config/config.env` and update the environment variables.
-
-# Install dependencies
-
-```
-npm install
-```
-
-# Run app
-
-```
-# Run in dev mode
-npm run dev
-
-# Run in prod
-npm start
-```
-
-# Seed database
-
-To seed the database with users, bootcamps, courses and reviews with data from the "\_data" folder, run
-
-```
-# Destroy data
-node seeder -d
-
-# Import data
-node seeder -i
-```
-
-# Contents
-
-- [DevCamper](#devcamper)
-- [Dockerize](#dockerize)
-- [Usage](#usage)
-- [Install dependencies](#install-dependencies)
-- [Run app](#run-app)
-- [Seed database](#seed-database)
-- [Contents](#contents)
-- [Functionalities](#functionalities)
-    - [Bootcamps](#bootcamps)
-    - [Courses](#courses)
-    - [Reviews](#reviews)
-    - [Users \& Authentication](#users--authentication)
-    - [Security](#security)
-    - [Documentation](#documentation)
-    - [Deployment (Digital Ocean)](#deployment-digital-ocean)
-    - [Code Related Suggestions](#code-related-suggestions)
-  - [Setting up Express Server](#setting-up-express-server)
-  - [Middlewares](#middlewares)
-  - [MongoDB](#mongodb)
-  - [Models](#models)
-    - [Create Bootcamp](#create-bootcamp)
-  - [Custom Error Handling Middleware](#custom-error-handling-middleware)
-  - [Mongoose Error Handling](#mongoose-error-handling)
-  - [Async Await Middleware](#async-await-middleware)
-  - [Mongoose Middlewares / Hooks](#mongoose-middlewares--hooks)
-  - [Retrieve Bootcamps within Radius](#retrieve-bootcamps-within-radius)
-  - [Filtering](#filtering)
-  - [Selecting Certain Fields and Sorting](#selecting-certain-fields-and-sorting)
-  - [Pagination](#pagination)
-  - [Relationship between documents](#relationship-between-documents)
-    - [Populate](#populate)
-    - [Reverse Populate](#reverse-populate)
-    - [Cascade Delete](#cascade-delete)
-  - [Aggregation](#aggregation)
-  - [Photo Upload](#photo-upload)
-  - [Advanced Results Middleware](#advanced-results-middleware)
-  - [User Registration and Password Encryption](#user-registration-and-password-encryption)
-  - [JSON Web Token](#json-web-token)
-  - [Logging in](#logging-in)
-  - [Sending JWT Cookies](#sending-jwt-cookies)
-  - [Auth Protect Middleware](#auth-protect-middleware)
-  - [Role Authorization](#role-authorization)
-  - [Ownership](#ownership)
-  - [Forgot Password Token](#forgot-password-token)
-  - [Sending Email](#sending-email)
-  - [Resetting Password](#resetting-password)
-  - [Clearing Token Cookie on Logout](#clearing-token-cookie-on-logout)
-  - [Injection and Sanitizing Data](#injection-and-sanitizing-data)
-  - [Security Headers](#security-headers)
-  - [XSS Protection](#xss-protection)
-  - [Rate Limit and HTTP Param Pollution](#rate-limit-and-http-param-pollution)
-  - [CORS](#cors)
-  - [Documentation](#documentation-1)
-  - [Deployment (Digital Ocean)](#deployment-digital-ocean-1)
-  - [Domain Server](#domain-server)
+![Certificate](UC-c6dfae56-c7d3-41f3-8d1b-61350976d4c8.jpg)
 
 # Functionalities
 
@@ -229,6 +133,107 @@ node seeder -i
 - Validation using Mongoose and no external libraries
 - Use async/await (create middleware to clean up controller methods)
 - Create a database seeder to import and destroy data
+
+# Contents
+
+- [DevCamper](#devcamper)
+- [Completion](#completion)
+- [Functionalities](#functionalities)
+    - [Bootcamps](#bootcamps)
+    - [Courses](#courses)
+    - [Reviews](#reviews)
+    - [Users \& Authentication](#users--authentication)
+    - [Security](#security)
+    - [Documentation](#documentation)
+    - [Deployment (Digital Ocean)](#deployment-digital-ocean)
+    - [Code Related Suggestions](#code-related-suggestions)
+- [Contents](#contents)
+- [Dockerize](#dockerize)
+- [Usage](#usage)
+- [Install dependencies](#install-dependencies)
+- [Run app](#run-app)
+- [Seed database](#seed-database)
+  - [Setting up Express Server](#setting-up-express-server)
+  - [Middlewares](#middlewares)
+  - [MongoDB](#mongodb)
+  - [Models](#models)
+    - [Create Bootcamp](#create-bootcamp)
+  - [Custom Error Handling Middleware](#custom-error-handling-middleware)
+  - [Mongoose Error Handling](#mongoose-error-handling)
+  - [Async Await Middleware](#async-await-middleware)
+  - [Mongoose Middlewares / Hooks](#mongoose-middlewares--hooks)
+  - [Retrieve Bootcamps within Radius](#retrieve-bootcamps-within-radius)
+  - [Filtering](#filtering)
+  - [Selecting Certain Fields and Sorting](#selecting-certain-fields-and-sorting)
+  - [Pagination](#pagination)
+  - [Relationship between documents](#relationship-between-documents)
+    - [Populate](#populate)
+    - [Reverse Populate](#reverse-populate)
+    - [Cascade Delete](#cascade-delete)
+  - [Aggregation](#aggregation)
+  - [Photo Upload](#photo-upload)
+  - [Advanced Results Middleware](#advanced-results-middleware)
+  - [User Registration and Password Encryption](#user-registration-and-password-encryption)
+  - [JSON Web Token](#json-web-token)
+  - [Logging in](#logging-in)
+  - [Sending JWT Cookies](#sending-jwt-cookies)
+  - [Auth Protect Middleware](#auth-protect-middleware)
+  - [Role Authorization](#role-authorization)
+  - [Ownership](#ownership)
+  - [Forgot Password Token](#forgot-password-token)
+  - [Sending Email](#sending-email)
+  - [Resetting Password](#resetting-password)
+  - [Clearing Token Cookie on Logout](#clearing-token-cookie-on-logout)
+  - [Injection and Sanitizing Data](#injection-and-sanitizing-data)
+  - [Security Headers](#security-headers)
+  - [XSS Protection](#xss-protection)
+  - [Rate Limit and HTTP Param Pollution](#rate-limit-and-http-param-pollution)
+  - [CORS](#cors)
+  - [Documentation](#documentation-1)
+  - [Deployment (Digital Ocean)](#deployment-digital-ocean-1)
+  - [Domain Server](#domain-server)
+
+# Dockerize
+
+run the command for building image: `docker build . -t <your username>/<app-name>`
+run the image: `docker run -p 49160:5000 -d <your username>/<app-name>`
+
+App will be available in port 49160
+
+to do: dockerize nginx
+https://ashwin9798.medium.com/nginx-with-docker-and-node-js-a-beginners-guide-434fe1216b6b
+
+# Usage
+
+Rename `config/config.env.env` to `config/config.env` and update the environment variables.
+
+# Install dependencies
+
+```
+npm install
+```
+
+# Run app
+
+```
+# Run in dev mode
+npm run dev
+
+# Run in prod
+npm start
+```
+
+# Seed database
+
+To seed the database with users, bootcamps, courses and reviews with data from the "\_data" folder, run
+
+```
+# Destroy data
+node seeder -d
+
+# Import data
+node seeder -i
+```
 
 ## Setting up Express Server
 
